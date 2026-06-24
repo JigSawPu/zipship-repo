@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: zipship-web
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 24.17.0
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_DAYS
+        value: 30
+      - key: MAX_ZIP_MB
+        value: 15
+      - key: MAX_EXTRACTED_MB
+        value: 75
+      - key: MAX_FILE_MB
+        value: 10
+      - key: MAX_FILES
+        value: 1500
+      - key: GITHUB_API_VERSION
+        value: 2026-03-10
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: GITHUB_APP_ID
+        sync: false
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_APP_SLUG
+        sync: false
+      - key: GITHUB_PRIVATE_KEY_BASE64
+        sync: false

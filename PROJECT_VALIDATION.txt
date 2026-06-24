@@ -1,0 +1,14 @@
+ZipShip validation report
+Date: 2026-06-24
+
+PASS  npm audit: 0 known vulnerabilities
+PASS  TypeScript client typecheck
+PASS  TypeScript server typecheck
+PASS  Vite production build
+PASS  Express production health endpoint
+PASS  Express production static frontend route
+PASS  ZIP common-root removal test
+PASS  ZIP path traversal rejection test
+PASS  render.yaml syntax parse
+
+The GitHub OAuth and repository publishing flow requires the deployer's own GitHub App credentials and selected repositories, so live GitHub writes were not performed in this package validation.
