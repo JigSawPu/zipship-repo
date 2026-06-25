@@ -1,6 +1,6 @@
 {
   "name": "zipship-web-service",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "type": "module",
   "description": "Installable PWA that safely unzips a project and publishes it to GitHub.",

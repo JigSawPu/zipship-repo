@@ -44,7 +44,7 @@ For the complete deployment walkthrough, open [SETUP_RENDER.md](./SETUP_RENDER.m
 
 Requirements:
 
-- Node.js 24 LTS
+- Node.js 22.22.3 LTS
 - A GitHub App with a local callback URL of `http://localhost:5173/api/auth/github/callback`
 
 ```bash
@@ -60,7 +60,7 @@ The Vite development server proxies `/api` and `/health` to the Express server o
 ## Production commands
 
 ```bash
-npm ci
+npm ci --no-audit --no-fund
 npm run build
 npm start
 ```
@@ -125,6 +125,10 @@ public/           PWA manifest, icons, and service worker
 render.yaml       Render Blueprint
 SETUP_RENDER.md   iPhone-friendly deployment instructions
 ```
+
+## Deployment portability note
+
+Version 1.0.2 pins Node.js 22.22.3 with npm 10.9.8 and uses only the public npm registry in `package-lock.json`. This avoids npm 11 installation instability observed on some hosted builders and prevents environment-specific registry URLs from leaking into deployment lockfiles.
 
 ## License
 

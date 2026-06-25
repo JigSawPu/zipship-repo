@@ -173,7 +173,7 @@ Tap **Apply** or **Deploy**.
 Render runs:
 
 ```text
-npm ci && npm run build
+npm ci --no-audit --no-fund && npm run build
 npm start
 ```
 
@@ -274,7 +274,7 @@ Push changes to the connected GitHub repository. With `autoDeploy: true`, Render
 If a deployment fails, open the Render service and inspect the build log. The most useful checks are:
 
 ```bash
-npm ci
+npm ci --no-audit --no-fund
 npm run typecheck
 npm run build
 ```
@@ -282,6 +282,21 @@ npm run build
 ---
 
 ## Troubleshooting
+
+
+### Build fails with “Exit handler never called”
+
+Version 1.0.2 pins Render to Node.js `22.22.3`, which includes npm `10.9.8`, and contains a portable lockfile that points only to `registry.npmjs.org`. Confirm these repository files are from v1.0.2 or later:
+
+```text
+.node-version
+.npmrc
+package.json
+package-lock.json
+render.yaml
+```
+
+Then open the Render service, choose **Manual Deploy**, select **Clear build cache & deploy**, and let the Blueprint resync if Render reports that `render.yaml` changed.
 
 ### “GitHub App is not configured”
 
