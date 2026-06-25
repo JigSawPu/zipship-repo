@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: zipship-one
+    name: zipship-one1
     runtime: node
     plan: free
     buildCommand: npm ci && npm run build
