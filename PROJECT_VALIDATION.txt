@@ -1,9 +1,17 @@
-ZipShip v1.0.2 validation
+ZipShip v1.1.0 validation
+Date: 2026-06-25
 
-- Public npm registry lockfile verified
-- Node 22 runtime pin verified
-- Production-mode npm install includes dev dependencies explicitly
-- TypeScript client/server checks passed
-- Vite production build passed
-- Express production server and /health endpoint passed
-- ZIP archive integrity verified
+PASS  Public npm registry lockfile only
+PASS  Render build installs development dependencies explicitly
+PASS  TypeScript client typecheck
+PASS  TypeScript server typecheck
+PASS  Vite production build
+PASS  Express production startup
+PASS  /health endpoint
+PASS  Production static frontend route
+PASS  History-preserving revert implementation
+PASS  Branch-head consistency guard before revert
+PASS  Parent validation before revert
+PASS  Pull-request-first revert workflow
+
+A live GitHub revert was not performed because it requires the deployer's GitHub App credentials and an authorized test repository.

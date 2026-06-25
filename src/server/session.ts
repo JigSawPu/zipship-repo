@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
-import type { Response, Request } from 'express';
+import type { Request, Response } from 'express';
 import { config } from './config.js';
 
 export interface UserProfile {
@@ -21,22 +21,22 @@ const COOKIE_NAME = 'zipship_session';
 const STATE_COOKIE = 'zipship_oauth_state';
 const AAD = Buffer.from('zipship-session-v1');
 const key = createHash('sha256').update(config.sessionSecret).digest();
+const commonCookie = {
+  httpOnly: true,
+  secure: config.nodeEnv === 'production',
+  sameSite: 'lax' as const,
+  path: '/'
+};
 
-function encode(value: Buffer): string {
-  return value.toString('base64url');
-}
-
-function decode(value: string): Buffer {
-  return Buffer.from(value, 'base64url');
-}
+function encode(value: Buffer): string { return value.toString('base64url'); }
+function decode(value: string): Buffer { return Buffer.from(value, 'base64url'); }
 
 export function encryptSession(session: AuthSession): string {
   const iv = randomBytes(12);
   const cipher = createCipheriv('aes-256-gcm', key, iv);
   cipher.setAAD(AAD);
   const ciphertext = Buffer.concat([cipher.update(JSON.stringify(session), 'utf8'), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  return `${encode(iv)}.${encode(tag)}.${encode(ciphertext)}`;
+  return `${encode(iv)}.${encode(cipher.getAuthTag())}.${encode(ciphertext)}`;
 }
 
 export function decryptSession(value: string | undefined): AuthSession | null {
@@ -54,13 +54,6 @@ export function decryptSession(value: string | undefined): AuthSession | null {
   }
 }
 
-const commonCookie = {
-  httpOnly: true,
-  secure: config.nodeEnv === 'production',
-  sameSite: 'lax' as const,
-  path: '/'
-};
-
 export function readSession(req: Request): AuthSession | null {
   return decryptSession(req.cookies?.[COOKIE_NAME] as string | undefined);
 }
@@ -72,9 +65,7 @@ export function writeSession(res: Response, session: AuthSession): void {
   });
 }
 
-export function clearSession(res: Response): void {
-  res.clearCookie(COOKIE_NAME, commonCookie);
-}
+export function clearSession(res: Response): void { res.clearCookie(COOKIE_NAME, commonCookie); }
 
 function signState(state: string): string {
   return createHmac('sha256', key).update(state).digest('base64url');
@@ -82,10 +73,7 @@ function signState(state: string): string {
 
 export function createOauthState(res: Response): string {
   const state = randomBytes(24).toString('base64url');
-  res.cookie(STATE_COOKIE, `${state}.${signState(state)}`, {
-    ...commonCookie,
-    maxAge: 10 * 60 * 1000
-  });
+  res.cookie(STATE_COOKIE, `${state}.${signState(state)}`, { ...commonCookie, maxAge: 10 * 60 * 1000 });
   return state;
 }
 

@@ -9,7 +9,6 @@ const API = 'https://api.github.com';
 export class GitHubError extends Error {
   status: number;
   details?: unknown;
-
   constructor(message: string, status = 500, details?: unknown) {
     super(message);
     this.name = 'GitHubError';
@@ -38,34 +37,24 @@ async function githubFetch<T>(path: string, token: string, init: RequestInit = {
       ...(init.headers ?? {})
     }
   });
-
   const text = await response.text();
   let body: unknown = null;
   if (text) {
-    try {
-      body = JSON.parse(text);
-    } catch {
-      body = text;
-    }
+    try { body = JSON.parse(text); } catch { body = text; }
   }
-
   if (!response.ok) {
     const message = typeof body === 'object' && body && 'message' in body
       ? String((body as { message: unknown }).message)
       : `GitHub request failed with status ${response.status}`;
     throw new GitHubError(message, response.status, body);
   }
-
   return body as T;
 }
 
 async function exchangeToken(params: URLSearchParams): Promise<TokenResponse> {
   const response = await fetch('https://github.com/login/oauth/access_token', {
     method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
+    headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
     body: params
   });
   const data = await response.json() as TokenResponse;
@@ -82,7 +71,6 @@ export async function exchangeCodeForSession(code: string): Promise<AuthSession>
     code,
     redirect_uri: `${config.appUrl}/api/auth/github/callback`
   }));
-
   const user = await githubFetch<{ id: number; login: string; name: string | null; avatar_url: string }>('/user', token.access_token!);
   const now = Date.now();
   return {
@@ -90,12 +78,7 @@ export async function exchangeCodeForSession(code: string): Promise<AuthSession>
     accessTokenExpiresAt: token.expires_in ? now + token.expires_in * 1000 : undefined,
     refreshToken: token.refresh_token,
     refreshTokenExpiresAt: token.refresh_token_expires_in ? now + token.refresh_token_expires_in * 1000 : undefined,
-    user: {
-      id: user.id,
-      login: user.login,
-      name: user.name,
-      avatarUrl: user.avatar_url
-    }
+    user: { id: user.id, login: user.login, name: user.name, avatarUrl: user.avatar_url }
   };
 }
 
@@ -105,18 +88,15 @@ export async function ensureUserToken(session: AuthSession, res: Response): Prom
     writeSession(res, session);
     return { token: session.accessToken, session };
   }
-
   if (!session.refreshToken || (session.refreshTokenExpiresAt && session.refreshTokenExpiresAt <= Date.now())) {
     throw new GitHubError('Your GitHub sign-in has expired. Please sign in again.', 401);
   }
-
   const refreshed = await exchangeToken(new URLSearchParams({
     client_id: config.githubClientId,
     client_secret: config.githubClientSecret,
     grant_type: 'refresh_token',
     refresh_token: session.refreshToken
   }));
-
   const now = Date.now();
   const next: AuthSession = {
     ...session,
@@ -132,18 +112,10 @@ export async function ensureUserToken(session: AuthSession, res: Response): Prom
 }
 
 async function createAppJwt(): Promise<string> {
-  let pem: string;
-  try {
-    pem = Buffer.from(config.githubPrivateKeyBase64, 'base64').toString('utf8');
-  } catch {
-    throw new GitHubError('The GitHub private key environment variable is invalid.', 500);
-  }
+  const pem = Buffer.from(config.githubPrivateKeyBase64, 'base64').toString('utf8');
   let privateKey;
-  try {
-    privateKey = createPrivateKey(pem);
-  } catch {
-    throw new GitHubError('The GitHub private key could not be read. Recreate its Base64 value and update Render.', 500);
-  }
+  try { privateKey = createPrivateKey(pem); }
+  catch { throw new GitHubError('The GitHub private key could not be read. Recreate its Base64 value and update Render.', 500); }
   const now = Math.floor(Date.now() / 1000);
   return new SignJWT({})
     .setProtectedHeader({ alg: 'RS256' })
@@ -191,22 +163,13 @@ export interface RepoSummary {
 export async function listRepositories(userToken: string): Promise<RepoSummary[]> {
   const installations = await listUserInstallations(userToken);
   const all: RepoSummary[] = [];
-
   for (const installation of installations) {
-    const installationToken = await createInstallationToken(installation.id);
+    const token = await createInstallationToken(installation.id);
     for (let page = 1; page <= 10; page += 1) {
-      const data = await githubFetch<{
-        repositories: Array<{
-          id: number;
-          full_name: string;
-          name: string;
-          private: boolean;
-          archived: boolean;
-          default_branch: string;
-          owner: { login: string };
-        }>;
-      }>(`/installation/repositories?per_page=100&page=${page}`, installationToken);
-
+      const data = await githubFetch<{ repositories: Array<{
+        id: number; full_name: string; name: string; private: boolean; archived: boolean;
+        default_branch: string; owner: { login: string };
+      }> }>(`/installation/repositories?per_page=100&page=${page}`, token);
       for (const repo of data.repositories) {
         all.push({
           id: repo.id,
@@ -223,168 +186,159 @@ export async function listRepositories(userToken: string): Promise<RepoSummary[]
       if (data.repositories.length < 100) break;
     }
   }
-
   return all.sort((a, b) => a.fullName.localeCompare(b.fullName));
 }
 
-export interface BranchSummary {
-  name: string;
-  protected: boolean;
-}
+export interface BranchSummary { name: string; protected: boolean; }
 
 export async function listBranches(token: string, owner: string, repo: string): Promise<BranchSummary[]> {
   const branches: BranchSummary[] = [];
   for (let page = 1; page <= 10; page += 1) {
     const data = await githubFetch<Array<{ name: string; protected: boolean }>>(
-      `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/branches?per_page=100&page=${page}`,
-      token
+      `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/branches?per_page=100&page=${page}`, token
     );
-    branches.push(...data);
+    branches.push(...data.map(({ name, protected: isProtected }) => ({ name, protected: isProtected })));
     if (data.length < 100) break;
   }
   return branches;
 }
 
-export interface GitTreeItem {
-  path?: string;
-  mode?: string;
-  type?: string;
-  sha?: string;
-  size?: number;
+function refPath(branch: string): string { return branch.split('/').map(encodeURIComponent).join('/'); }
+
+export async function getBranch(token: string, owner: string, repo: string, branch: string): Promise<BranchSummary> {
+  const data = await githubFetch<{ name: string; protected: boolean }>(
+    `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/branches/${refPath(branch)}`, token
+  );
+  return { name: data.name, protected: data.protected };
 }
 
-export interface RepoSnapshot {
-  commitSha: string;
-  treeSha: string;
-  tree: GitTreeItem[];
-  truncated: boolean;
-}
-
-function refPath(branch: string): string {
-  return branch.split('/').map(encodeURIComponent).join('/');
-}
+export interface GitTreeItem { path?: string; mode?: string; type?: string; sha?: string; size?: number; }
+export interface RepoSnapshot { commitSha: string; treeSha: string; tree: GitTreeItem[]; truncated: boolean; }
 
 export async function getRepoSnapshot(token: string, owner: string, repo: string, branch: string): Promise<RepoSnapshot> {
   const ref = await githubFetch<{ object: { sha: string } }>(
-    `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/ref/heads/${refPath(branch)}`,
-    token
+    `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/ref/heads/${refPath(branch)}`, token
   );
   const commit = await githubFetch<{ tree: { sha: string } }>(
-    `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/commits/${ref.object.sha}`,
-    token
+    `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/commits/${ref.object.sha}`, token
   );
   const tree = await githubFetch<{ tree: GitTreeItem[]; truncated: boolean }>(
-    `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/trees/${commit.tree.sha}?recursive=1`,
-    token
+    `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/trees/${commit.tree.sha}?recursive=1`, token
   );
   return { commitSha: ref.object.sha, treeSha: commit.tree.sha, tree: tree.tree, truncated: tree.truncated };
 }
 
+export interface CommitParent { sha: string; htmlUrl: string; }
+export interface CommitDetails {
+  sha: string;
+  message: string;
+  treeSha: string;
+  authorName: string;
+  authorDate: string | null;
+  parents: CommitParent[];
+  htmlUrl: string;
+}
+
+export async function getCommitDetails(token: string, owner: string, repo: string, sha: string): Promise<CommitDetails> {
+  const data = await githubFetch<{
+    sha: string;
+    message: string;
+    tree: { sha: string };
+    author: { name: string; date: string | null } | null;
+    committer: { name: string; date: string | null } | null;
+    parents: Array<{ sha: string; url: string }>;
+  }>(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/commits/${encodeURIComponent(sha)}`, token);
+  return {
+    sha: data.sha,
+    message: data.message,
+    treeSha: data.tree.sha,
+    authorName: data.author?.name || data.committer?.name || 'Unknown author',
+    authorDate: data.author?.date || data.committer?.date || null,
+    parents: data.parents.map((parent) => ({
+      sha: parent.sha,
+      htmlUrl: `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commit/${parent.sha}`
+    })),
+    htmlUrl: `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commit/${data.sha}`
+  };
+}
+
+export interface CompareFile {
+  filename: string;
+  previousFilename?: string;
+  status: string;
+  additions: number;
+  deletions: number;
+  changes: number;
+}
+
+export interface CompareResult {
+  files: CompareFile[];
+  aheadBy: number;
+  behindBy: number;
+  totalCommits: number;
+}
+
+export async function compareCommits(token: string, owner: string, repo: string, baseSha: string, headSha: string): Promise<CompareResult> {
+  const data = await githubFetch<{
+    files?: Array<{ filename: string; previous_filename?: string; status: string; additions: number; deletions: number; changes: number }>;
+    ahead_by: number; behind_by: number; total_commits: number;
+  }>(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/compare/${encodeURIComponent(baseSha)}...${encodeURIComponent(headSha)}`, token);
+  return {
+    files: (data.files ?? []).map((file) => ({
+      filename: file.filename,
+      previousFilename: file.previous_filename,
+      status: file.status,
+      additions: file.additions,
+      deletions: file.deletions,
+      changes: file.changes
+    })),
+    aheadBy: data.ahead_by,
+    behindBy: data.behind_by,
+    totalCommits: data.total_commits
+  };
+}
+
 export async function createBlob(token: string, owner: string, repo: string, content: Buffer): Promise<string> {
-  const data = await githubFetch<{ sha: string }>(
-    `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/blobs`,
-    token,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: content.toString('base64'), encoding: 'base64' })
-    }
-  );
+  const data = await githubFetch<{ sha: string }>(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/blobs`, token, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: content.toString('base64'), encoding: 'base64' })
+  });
   return data.sha;
 }
 
-export interface TreeEntry {
-  path: string;
-  mode: '100644' | '100755';
-  type: 'blob';
-  sha: string | null;
-}
+export interface TreeEntry { path: string; mode: '100644' | '100755'; type: 'blob'; sha: string | null; }
 
-export async function createTree(
-  token: string,
-  owner: string,
-  repo: string,
-  baseTree: string,
-  tree: TreeEntry[]
-): Promise<string> {
-  const data = await githubFetch<{ sha: string }>(
-    `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/trees`,
-    token,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ base_tree: baseTree, tree })
-    }
-  );
+export async function createTree(token: string, owner: string, repo: string, baseTree: string, tree: TreeEntry[]): Promise<string> {
+  const data = await githubFetch<{ sha: string }>(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/trees`, token, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ base_tree: baseTree, tree })
+  });
   return data.sha;
 }
 
-export async function createCommit(
-  token: string,
-  owner: string,
-  repo: string,
-  message: string,
-  treeSha: string,
-  parentSha: string
-): Promise<{ sha: string; htmlUrl: string }> {
-  const data = await githubFetch<{ sha: string }>(
-    `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/commits`,
-    token,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, tree: treeSha, parents: [parentSha] })
-    }
-  );
+export async function createCommit(token: string, owner: string, repo: string, message: string, treeSha: string, parentSha: string): Promise<{ sha: string; htmlUrl: string }> {
+  const data = await githubFetch<{ sha: string }>(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/commits`, token, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, tree: treeSha, parents: [parentSha] })
+  });
   return { sha: data.sha, htmlUrl: `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commit/${data.sha}` };
 }
 
 export async function createBranch(token: string, owner: string, repo: string, branch: string, sha: string): Promise<void> {
-  await githubFetch(
-    `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/refs`,
-    token,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ref: `refs/heads/${branch}`, sha })
-    }
-  );
+  await githubFetch(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/refs`, token, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ref: `refs/heads/${branch}`, sha })
+  });
 }
 
 export async function updateBranch(token: string, owner: string, repo: string, branch: string, sha: string): Promise<void> {
-  await githubFetch(
-    `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/refs/heads/${refPath(branch)}`,
-    token,
-    {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sha, force: false })
-    }
-  );
+  await githubFetch(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/refs/heads/${refPath(branch)}`, token, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sha, force: false })
+  });
 }
 
-export async function openPullRequest(
-  token: string,
-  owner: string,
-  repo: string,
-  head: string,
-  base: string,
-  title: string
-): Promise<{ number: number; htmlUrl: string }> {
-  const data = await githubFetch<{ number: number; html_url: string }>(
-    `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls`,
-    token,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title,
-        head,
-        base,
-        body: 'Created by ZipShip from an uploaded ZIP archive.'
-      })
-    }
-  );
+export async function openPullRequest(token: string, owner: string, repo: string, head: string, base: string, title: string, body = 'Created by ZipShip.'): Promise<{ number: number; htmlUrl: string }> {
+  const data = await githubFetch<{ number: number; html_url: string }>(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls`, token, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, head, base, body })
+  });
   return { number: data.number, htmlUrl: data.html_url };
 }
 

@@ -1,12 +1,13 @@
 {
   "name": "zipship-web-service",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
-  "description": "Installable PWA that safely unzips a project and publishes it to GitHub.",
+  "description": "Installable PWA that safely publishes ZIP projects to GitHub and can undo the latest branch commit.",
   "engines": {
     "node": ">=22.22.0 <23.0.0"
   },
+  "packageManager": "npm@10.9.8",
   "scripts": {
     "dev": "concurrently -k -n server,client \"tsx watch src/server/index.ts\" \"vite\"",
     "typecheck": "tsc -p tsconfig.client.json && tsc -p tsconfig.server.json --noEmit",
@@ -27,7 +28,7 @@
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
     "@types/multer": "^2.0.0",
-    "@types/node": "^24.10.1",
+    "@types/node": "^22.15.30",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
@@ -35,6 +36,5 @@
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
     "vite": "^8.1.0"
-  },
-  "packageManager": "npm@10.9.8"
+  }
 }

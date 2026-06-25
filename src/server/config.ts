@@ -30,10 +30,7 @@ export const config = {
 
 export function githubConfigured(): boolean {
   return Boolean(
-    config.githubAppId &&
-    config.githubClientId &&
-    config.githubClientSecret &&
-    config.githubPrivateKeyBase64 &&
-    config.sessionSecret
+    config.githubAppId && config.githubClientId && config.githubClientSecret &&
+    config.githubPrivateKeyBase64 && config.sessionSecret
   );
 }
