@@ -1,9 +1,0 @@
-ZipShip v1.0.2 validation
-
-- Public npm registry lockfile verified
-- Node 22 runtime pin verified
-- Production-mode npm install includes dev dependencies explicitly
-- TypeScript client/server checks passed
-- Vite production build passed
-- Express production server and /health endpoint passed
-- ZIP archive integrity verified
