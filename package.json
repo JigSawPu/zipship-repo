@@ -1,11 +1,11 @@
 {
   "name": "zipship-web-service",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "description": "Installable PWA that safely unzips a project and publishes it to GitHub.",
   "engines": {
-    "node": ">=24.0.0 <25.0.0"
+    "node": ">=22.22.0 <23.0.0"
   },
   "scripts": {
     "dev": "concurrently -k -n server,client \"tsx watch src/server/index.ts\" \"vite\"",
@@ -35,5 +35,6 @@
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
     "vite": "^8.1.0"
-  }
+  },
+  "packageManager": "npm@10.9.8"
 }
